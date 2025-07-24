@@ -35,8 +35,17 @@ bool MSWorksImportFilter::doImportDocument(weld::Window* pParent,
     libwps::WPSKind kind = libwps::WPS_TEXT;
     libwps::WPSCreator creator;
     bool needEncoding = false;
-    const libwps::WPSConfidence confidence
-        = libwps::WPSDocument::isFileFormatSupported(&rInput, kind, creator, needEncoding);
+    libwps::WPSConfidence confidence = libwps::WPS_CONFIDENCE_NONE;
+
+    try
+    {
+        confidence = libwps::WPSDocument::isFileFormatSupported(&rInput, kind, creator, needEncoding);
+    }
+    catch (...)
+    {
+        // Gracefully handle corrupted/invalid files (e.g., from failed network downloads)
+        return false;
+    }
 
     std::string fileEncoding;
     if ((kind == libwps::WPS_TEXT) && (confidence == libwps::WPS_CONFIDENCE_EXCELLENT)
@@ -96,31 +105,49 @@ bool MSWorksImportFilter::doImportDocument(weld::Window* pParent,
 
 bool MSWorksImportFilter::doDetectFormat(librevenge::RVNGInputStream& rInput, OUString& rTypeName)
 {
-    libwps::WPSKind kind = libwps::WPS_TEXT;
-    libwps::WPSCreator creator;
-    bool needEncoding;
-    const libwps::WPSConfidence confidence
-        = libwps::WPSDocument::isFileFormatSupported(&rInput, kind, creator, needEncoding);
-
-    if ((kind == libwps::WPS_TEXT) && (confidence == libwps::WPS_CONFIDENCE_EXCELLENT))
+    try
     {
-        switch (creator)
+        libwps::WPSKind kind = libwps::WPS_TEXT;
+        libwps::WPSCreator creator;
+        bool needEncoding;
+        libwps::WPSConfidence confidence = libwps::WPS_CONFIDENCE_NONE;
+
+        try
         {
-            case libwps::WPS_MSWORKS:
-                rTypeName = "writer_MS_Works_Document";
-                break;
-            case libwps::WPS_RESERVED_0:
-                rTypeName = "writer_MS_Write";
-                break;
-            case libwps::WPS_RESERVED_1:
-                rTypeName = "writer_DosWord";
-                break;
-            case libwps::WPS_RESERVED_4:
-                rTypeName = "writer_PocketWord_File";
-                break;
-            default:
-                break;
+            confidence = libwps::WPSDocument::isFileFormatSupported(&rInput, kind, creator, needEncoding);
         }
+        catch (...)
+        {
+            // Gracefully handle corrupted/invalid files (e.g., from failed network downloads)
+            return false;
+        }
+
+        if ((kind == libwps::WPS_TEXT) && (confidence == libwps::WPS_CONFIDENCE_EXCELLENT))
+        {
+            switch (creator)
+            {
+                case libwps::WPS_MSWORKS:
+                    rTypeName = "writer_MS_Works_Document";
+                    break;
+                case libwps::WPS_RESERVED_0:
+                    rTypeName = "writer_MS_Write";
+                    break;
+                case libwps::WPS_RESERVED_1:
+                    rTypeName = "writer_DosWord";
+                    break;
+                case libwps::WPS_RESERVED_4:
+                    rTypeName = "writer_PocketWord_File";
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+    catch (...)
+    {
+        // Gracefully handle corrupted/invalid files (e.g., from failed network downloads)
+        // Return false to indicate this filter doesn't support the file
+        return false;
     }
 
     return !rTypeName.isEmpty();

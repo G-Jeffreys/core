@@ -184,18 +184,26 @@ WordPerfectImportFilter::detect(css::uno::Sequence<css::beans::PropertyValue>& D
     WPXSvInputStream input(xInputStream);
 
     OUString sTypeName;
-    libwpd::WPDConfidence confidence = libwpd::WPDocument::isFileFormatSupported(&input);
-    if (confidence == libwpd::WPD_CONFIDENCE_EXCELLENT
-        || confidence == libwpd::WPD_CONFIDENCE_SUPPORTED_ENCRYPTION)
+    try
     {
-        if (location == nLength)
+        libwpd::WPDConfidence confidence = libwpd::WPDocument::isFileFormatSupported(&input);
+        if (confidence == libwpd::WPD_CONFIDENCE_EXCELLENT
+            || confidence == libwpd::WPD_CONFIDENCE_SUPPORTED_ENCRYPTION)
         {
-            Descriptor.realloc(nLength + 1);
-            Descriptor.getArray()[location].Name = "TypeName";
-        }
+            if (location == nLength)
+            {
+                Descriptor.realloc(nLength + 1);
+                Descriptor.getArray()[location].Name = "TypeName";
+            }
 
-        sTypeName = "writer_WordPerfect_Document";
-        Descriptor.getArray()[location].Value <<= sTypeName;
+            sTypeName = "writer_WordPerfect_Document";
+            Descriptor.getArray()[location].Value <<= sTypeName;
+        }
+    }
+    catch (...)
+    {
+        // Gracefully handle corrupted/invalid files (e.g., from failed network downloads)
+        return OUString();
     }
 
     return sTypeName;

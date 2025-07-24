@@ -1,0 +1,134 @@
+/*
+ * OAuth2 Token Management Interface
+ * Handles secure token storage, validation, and automatic refresh
+ */
+
+#ifndef __com_sun_star_ucb_XTokenManager_idl__
+#define __com_sun_star_ucb_XTokenManager_idl__
+
+#include <com/sun/star/uno/XInterface.idl>
+#include <com/sun/star/beans/PropertyValue.idl>
+#include <com/sun/star/util/DateTime.idl>
+
+module com { module sun { module star { module ucb {
+
+/**
+ * OAuth2 Token Manager Interface
+ *
+ * Provides secure token storage and management with automatic expiry detection,
+ * refresh capabilities, and token rotation support.
+ */
+interface XTokenManager : com::sun::star::uno::XInterface
+{
+    /**
+     * Store OAuth2 tokens securely
+     *
+     * @param sProviderName Provider name/identifier
+     * @param sUsername User account
+     * @param sAccessToken Current access token
+     * @param sRefreshToken Refresh token for renewal
+     * @param aExpiryTime When the access token expires
+     */
+    void storeToken([in] string sProviderName,
+                   [in] string sUsername,
+                   [in] string sAccessToken,
+                   [in] string sRefreshToken,
+                   [in] com::sun::star::util::DateTime aExpiryTime);
+
+    /**
+     * Get a valid access token, automatically refreshing if needed
+     *
+     * @param sProviderName Provider name/identifier
+     * @param sUsername User account
+     * @return Valid access token or empty string if refresh failed
+     */
+    string getValidAccessToken([in] string sProviderName,
+                              [in] string sUsername);
+
+    /**
+     * Retrieve stored refresh token
+     *
+     * @param sProviderName Provider name/identifier
+     * @param sUsername User account
+     * @return Refresh token or empty string if not found
+     */
+    string getRefreshToken([in] string sProviderName,
+                          [in] string sUsername);
+
+    /**
+     * Check if there is a valid (non-expired) token available
+     *
+     * @param sProviderName Provider name/identifier
+     * @param sUsername User account
+     * @return True if valid token exists
+     */
+    boolean hasValidToken([in] string sProviderName,
+                         [in] string sUsername);
+
+    /**
+     * Check if access token is expired
+     *
+     * @param sProviderName Provider name/identifier
+     * @param sUsername User account
+     * @return True if token is expired
+     */
+    boolean isTokenExpired([in] string sProviderName,
+                          [in] string sUsername);
+
+    /**
+     * Clear tokens for a specific account
+     *
+     * @param sProviderName Provider name/identifier
+     * @param sUsername User account
+     */
+    void clearToken([in] string sProviderName,
+                   [in] string sUsername);
+
+    /**
+     * Clear all stored tokens
+     */
+    void clearAllTokens();
+
+    /**
+     * Get all authenticated accounts for a provider
+     *
+     * @param sProviderName Provider name/identifier
+     * @return List of usernames with tokens
+     */
+    sequence<string> getAuthenticatedAccounts([in] string sProviderName);
+
+    /**
+     * Update token expiry time
+     *
+     * @param sProviderName Provider name/identifier
+     * @param sUsername User account
+     * @param aNewExpiryTime New expiry time
+     */
+    void updateTokenExpiry([in] string sProviderName,
+                          [in] string sUsername,
+                          [in] com::sun::star::util::DateTime aNewExpiryTime);
+
+    /**
+     * Manually refresh token if needed (based on expiry threshold)
+     *
+     * @param sProviderName Provider name/identifier
+     * @param sUsername User account
+     * @return True if refresh was successful or not needed
+     */
+    boolean refreshTokenIfNeeded([in] string sProviderName,
+                                [in] string sUsername);
+
+    /**
+     * Get minutes until token expires
+     *
+     * @param sProviderName Provider name/identifier
+     * @param sUsername User account
+     * @return Minutes until expiry, or -1 if expired/not found
+     */
+    long getTokenExpiryMinutes([in] string sProviderName,
+                              [in] string sUsername);
+};
+
+}; }; }; };
+
+#endif

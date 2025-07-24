@@ -1,0 +1,113 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+#ifndef __com_sun_star_ucb_XOAuth2Configuration_idl__
+#define __com_sun_star_ucb_XOAuth2Configuration_idl__
+
+#include <com/sun/star/uno/XInterface.idl>
+#include <com/sun/star/beans/PropertyValue.idl>
+#include <com/sun/star/container/NoSuchElementException.idl>
+#include <com/sun/star/lang/IllegalArgumentException.idl>
+#include <com/sun/star/ucb/OAuth2ProviderConfig.idl>
+
+module com { module sun { module star { module ucb {
+
+/**
+ * OAuth2 Configuration Manager Interface
+ *
+ * Provides runtime configuration management for OAuth2 providers
+ *
+ * @since LibreOffice 25.2
+ */
+interface XOAuth2Configuration : com::sun::star::uno::XInterface
+{
+    /**
+     * Register or update OAuth2 provider configuration
+     *
+     * @param sProviderUrl Provider base URL (unique identifier)
+     * @param aConfig Complete provider configuration
+     */
+    void setProviderConfig([in] string sProviderUrl,
+                          [in] OAuth2ProviderConfig aConfig);
+
+    /**
+     * Get OAuth2 provider configuration
+     *
+     * @param sProviderUrl Provider base URL
+     * @return Provider configuration
+     * @throws NoSuchElementException if provider not configured
+     */
+    OAuth2ProviderConfig getProviderConfig([in] string sProviderUrl)
+        raises(com::sun::star::container::NoSuchElementException);
+
+    /**
+     * Check if provider is configured
+     *
+     * @param sProviderUrl Provider base URL
+     * @return True if configured
+     */
+    boolean hasProviderConfig([in] string sProviderUrl);
+
+    /**
+     * Remove provider configuration
+     *
+     * @param sProviderUrl Provider base URL
+     */
+    void removeProviderConfig([in] string sProviderUrl);
+
+    /**
+     * Get list of all configured providers
+     *
+     * @return Sequence of provider URLs
+     */
+    sequence<string> getConfiguredProviders();
+
+    /**
+     * Get list of all configured providers with display names
+     *
+     * @return Sequence of PropertyValue pairs (URL, DisplayName)
+     */
+    sequence<com::sun::star::beans::PropertyValue> getConfiguredProvidersWithNames();
+
+    /**
+     * Set default OAuth2 configurations (Google Drive, OneDrive, etc.)
+     * This allows restoring built-in provider configurations
+     */
+    void setDefaultConfigurations();
+
+    /**
+     * Validate OAuth2 configuration
+     *
+     * @param aConfig Configuration to validate
+     * @return True if configuration is valid
+     */
+    boolean validateConfiguration([in] OAuth2ProviderConfig aConfig);
+
+    /**
+     * Import provider configurations from external source
+     *
+     * @param sConfigData Configuration data (JSON or XML format)
+     * @throws IllegalArgumentException for invalid configuration data
+     */
+    void importConfigurations([in] string sConfigData)
+        raises(com::sun::star::lang::IllegalArgumentException);
+
+    /**
+     * Export current provider configurations
+     *
+     * @return Configuration data in JSON format
+     */
+    string exportConfigurations();
+};
+
+}; }; }; };
+
+#endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

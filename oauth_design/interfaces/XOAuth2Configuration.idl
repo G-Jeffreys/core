@@ -1,0 +1,141 @@
+/*
+ * OAuth2 Configuration Management Interface
+ * Enables runtime configuration of OAuth2 providers without rebuilding
+ */
+
+#ifndef __com_sun_star_ucb_XOAuth2Configuration_idl__
+#define __com_sun_star_ucb_XOAuth2Configuration_idl__
+
+#include <com/sun/star/uno/XInterface.idl>
+#include <com/sun/star/beans/PropertyValue.idl>
+
+module com { module sun { module star { module ucb {
+
+/**
+ * OAuth2 Configuration Structure
+ *
+ * Holds complete OAuth2 configuration for a cloud provider
+ */
+struct OAuth2ProviderConfig
+{
+    /** Display name for the provider (e.g., "Google Drive") */
+    string sDisplayName;
+
+    /** Base URL for the provider API */
+    string sBaseUrl;
+
+    /** OAuth2 authorization endpoint */
+    string sAuthUrl;
+
+    /** OAuth2 token endpoint */
+    string sTokenUrl;
+
+    /** OAuth2 scope (permissions requested) */
+    string sScope;
+
+    /** OAuth2 client ID */
+    string sClientId;
+
+    /** OAuth2 client secret */
+    string sClientSecret;
+
+    /** OAuth2 redirect URI */
+    string sRedirectUri;
+
+    /** Whether to use PKCE (Proof Key for Code Exchange) */
+    boolean bUsePKCE;
+
+    /** Whether to support device flow */
+    boolean bSupportDeviceFlow;
+
+    /** Custom OAuth parameters */
+    sequence<com::sun::star::beans::PropertyValue> aCustomParams;
+};
+
+/**
+ * OAuth2 Configuration Manager Interface
+ *
+ * Provides runtime configuration management for OAuth2 providers
+ */
+interface XOAuth2Configuration : com::sun::star::uno::XInterface
+{
+    /**
+     * Register or update OAuth2 provider configuration
+     *
+     * @param sProviderUrl Provider base URL (unique identifier)
+     * @param aConfig Complete provider configuration
+     */
+    void setProviderConfig([in] string sProviderUrl,
+                          [in] OAuth2ProviderConfig aConfig);
+
+    /**
+     * Get OAuth2 provider configuration
+     *
+     * @param sProviderUrl Provider base URL
+     * @return Provider configuration
+     */
+    OAuth2ProviderConfig getProviderConfig([in] string sProviderUrl)
+        raises(com::sun::star::container::NoSuchElementException);
+
+    /**
+     * Check if provider is configured
+     *
+     * @param sProviderUrl Provider base URL
+     * @return True if configured
+     */
+    boolean hasProviderConfig([in] string sProviderUrl);
+
+    /**
+     * Remove provider configuration
+     *
+     * @param sProviderUrl Provider base URL
+     */
+    void removeProviderConfig([in] string sProviderUrl);
+
+    /**
+     * Get list of all configured providers
+     *
+     * @return Sequence of provider URLs
+     */
+    sequence<string> getConfiguredProviders();
+
+    /**
+     * Get list of all configured providers with display names
+     *
+     * @return Sequence of PropertyValue pairs (URL, DisplayName)
+     */
+    sequence<com::sun::star::beans::PropertyValue> getConfiguredProvidersWithNames();
+
+    /**
+     * Set default OAuth2 configurations (Google Drive, OneDrive, etc.)
+     * This allows restoring built-in provider configurations
+     */
+    void setDefaultConfigurations();
+
+    /**
+     * Validate OAuth2 configuration
+     *
+     * @param aConfig Configuration to validate
+     * @return True if configuration is valid
+     */
+    boolean validateConfiguration([in] OAuth2ProviderConfig aConfig);
+
+    /**
+     * Import provider configurations from external source
+     *
+     * @param sConfigData Configuration data (JSON or XML format)
+     */
+    void importConfigurations([in] string sConfigData)
+        raises(com::sun::star::lang::IllegalArgumentException);
+
+    /**
+     * Export current provider configurations
+     *
+     * @return Configuration data in JSON format
+     */
+    string exportConfigurations();
+};
+
+}; }; }; };
+
+#endif

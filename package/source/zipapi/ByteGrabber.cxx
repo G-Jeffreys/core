@@ -41,7 +41,11 @@ ByteGrabber::ByteGrabber(uno::Reference  < io::XInputStream > const & xIstream)
 , xSeek (xIstream, uno::UNO_QUERY )
 {
     mpByteReader = dynamic_cast<comphelper::ByteReader*>(xStream.get());
-    assert(mpByteReader);
+    if (!mpByteReader)
+    {
+        throw io::IOException(
+            u"ByteGrabber: stream does not support ByteReader interface (possibly corrupted download)"_ustr);
+    }
 }
 
 ByteGrabber::~ByteGrabber()
@@ -53,7 +57,11 @@ void ByteGrabber::setInputStream (const uno::Reference < io::XInputStream >& xNe
     xStream = xNewStream;
     xSeek.set(xNewStream, uno::UNO_QUERY);
     mpByteReader = dynamic_cast<comphelper::ByteReader*>(xStream.get());
-    assert(mpByteReader);
+    if (!mpByteReader)
+    {
+        throw io::IOException(
+            u"ByteGrabber: stream does not support ByteReader interface (possibly corrupted download)"_ustr);
+    }
 }
 
 sal_Int32 ByteGrabber::readBytes( sal_Int8* aData,

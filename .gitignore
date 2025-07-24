@@ -200,3 +200,29 @@ gdbtrace.log
 
 # xml unit tests sometimes leave these lying around
 **/secmod.db
+
+# Cursor development documentation folder (not part of LibreOffice project)
+/cursor_docs
+
+AGENT.md
+
+# OAuth credentials (added for G2P6 Google Drive development)
+/config_host/
+/setup_oauth_credentials.sh
+
+# qadevOOo build artifacts (compiled test classes and outputs)
+/qadevOOo/bin/
+/qadevOOo/class/
+/qadevOOo/*.class
+/qadevOOo/**/*.class
+
+# Test artifacts and scripts
+/*.sh
+/test_*
+/simple_test.sh
+/test_data_transfer_debug.sh
+/test_files/
+/test_format_detection_debug.sh
+/test_google_drive.sh
+/test_google_drive_fix.sh
+/test_oauth_refresh_fix.sh

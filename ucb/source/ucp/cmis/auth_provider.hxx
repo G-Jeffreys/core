@@ -11,6 +11,7 @@
 #include <libcmis/libcmis.hxx>
 
 #include <com/sun/star/ucb/XCommandEnvironment.hpp>
+#include <com/sun/star/ucb/XOAuth2Service.hpp>
 #include <cppuhelper/weakref.hxx>
 
 namespace cmis
@@ -21,6 +22,9 @@ namespace cmis
         static css::uno::WeakReference< css::ucb::XCommandEnvironment> sm_xEnv;
         OUString m_sUrl;
         OUString m_sBindingUrl;
+
+        // OAuth2 modernization support (Enhanced Phase 3)
+        mutable css::uno::Reference< css::ucb::XOAuth2Service > m_xOAuth2Service;
 
         public:
             AuthProvider ( const css::uno::Reference< css::ucb::XCommandEnvironment> & xEnv,
@@ -33,6 +37,37 @@ namespace cmis
             std::string getRefreshToken( std::string& username );
             bool storeRefreshToken(const std::string& username, const std::string& password,
                                    const std::string& refreshToken);
+
+            // OAuth2 modernization methods (Enhanced Phase 3)
+            /**
+             * Get OAuth2Service instance (lazy initialization)
+             */
+            css::uno::Reference< css::ucb::XOAuth2Service > getOAuth2Service() const;
+
+            /**
+             * Check if OAuth2 modernization is enabled for this provider
+             */
+            bool shouldUseOAuth2Service() const;
+
+            /**
+             * Get provider name from binding URL for OAuth2 service
+             */
+            OUString getProviderNameFromUrl() const;
+
+            /**
+             * Configure Google Drive OAuth2 provider settings
+             */
+            void configureGoogleDriveProvider() const;
+
+            /**
+             * Get valid access token using OAuth2 service with automatic refresh
+             */
+            std::string getValidOAuthToken(const std::string& username) const;
+
+            /**
+             * Perform complete OAuth2 authentication flow
+             */
+            std::string performOAuth2Authentication(const std::string& username) const;
 
             static char* copyWebAuthCodeFallback( const char* url,
                     const char* /*username*/,

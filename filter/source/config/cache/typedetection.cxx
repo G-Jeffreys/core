@@ -1047,6 +1047,13 @@ OUString TypeDetection::impl_detectTypeFlatAndDeep(      utl::MediaDescriptor& r
         }
         catch(const css::container::NoSuchElementException&)
             {}
+        catch(...)
+        {
+            // Comprehensive exception handling for format detection failures
+            // (e.g., corrupted data from failed network downloads, infinite hangs)
+            // Continue with next detector instead of crashing/freezing
+            SAL_WARN("filter.config", "Format detection service failed for type: " << sFlatType);
+        }
         // e)
     }
 

@@ -695,6 +695,7 @@ $(eval $(call gb_Helper_register_libraries_for_install,PLAINLIBS_OOO,ooo, \
 	ucpfile1 \
     $(call gb_Helper_optional,XMLHELP,ucpchelp1) \
 	ucphier1 \
+	ucpoauth2 \
 	ucppkg1 \
     $(call gb_CondExeUnopkg,unopkgapp) \
 	xmlsecurity \

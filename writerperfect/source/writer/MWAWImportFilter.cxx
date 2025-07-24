@@ -44,41 +44,49 @@ bool MWAWImportFilter::doDetectFormat(librevenge::RVNGInputStream& rInput, OUStr
 {
     rTypeName.clear();
 
-    MWAWDocument::Type docType = MWAWDocument::MWAW_T_UNKNOWN;
-    MWAWDocument::Kind docKind = MWAWDocument::MWAW_K_UNKNOWN;
-    const MWAWDocument::Confidence confidence
-        = MWAWDocument::isFileFormatSupported(&rInput, docType, docKind);
-
-    if (confidence == MWAWDocument::MWAW_C_EXCELLENT)
+    try
     {
-        if (docKind == MWAWDocument::MWAW_K_TEXT)
+        MWAWDocument::Type docType = MWAWDocument::MWAW_T_UNKNOWN;
+        MWAWDocument::Kind docKind = MWAWDocument::MWAW_K_UNKNOWN;
+        const MWAWDocument::Confidence confidence
+            = MWAWDocument::isFileFormatSupported(&rInput, docType, docKind);
+
+        if (confidence == MWAWDocument::MWAW_C_EXCELLENT)
         {
-            switch (docType)
+            if (docKind == MWAWDocument::MWAW_K_TEXT)
             {
-                case MWAWDocument::MWAW_T_CLARISWORKS:
-                    rTypeName = "writer_ClarisWorks";
-                    break;
-                case MWAWDocument::MWAW_T_MACWRITE:
-                case MWAWDocument::MWAW_T_MACWRITEPRO:
-                    rTypeName = "writer_MacWrite";
-                    break;
-                case MWAWDocument::MWAW_T_MARINERWRITE:
-                    rTypeName = "writer_Mariner_Write";
-                    break;
-                case MWAWDocument::MWAW_T_MICROSOFTWORD:
-                    rTypeName = "writer_Mac_Word";
-                    break;
-                case MWAWDocument::MWAW_T_MICROSOFTWORKS:
-                    rTypeName = "writer_Mac_Works";
-                    break;
-                case MWAWDocument::MWAW_T_WRITENOW:
-                    rTypeName = "writer_WriteNow";
-                    break;
-                default:
-                    rTypeName = "MWAW_Text_Document";
-                    break;
+                switch (docType)
+                {
+                    case MWAWDocument::MWAW_T_CLARISWORKS:
+                        rTypeName = "writer_ClarisWorks";
+                        break;
+                    case MWAWDocument::MWAW_T_MACWRITE:
+                    case MWAWDocument::MWAW_T_MACWRITEPRO:
+                        rTypeName = "writer_MacWrite";
+                        break;
+                    case MWAWDocument::MWAW_T_MARINERWRITE:
+                        rTypeName = "writer_Mariner_Write";
+                        break;
+                    case MWAWDocument::MWAW_T_MICROSOFTWORD:
+                        rTypeName = "writer_Mac_Word";
+                        break;
+                    case MWAWDocument::MWAW_T_MICROSOFTWORKS:
+                        rTypeName = "writer_Mac_Works";
+                        break;
+                    case MWAWDocument::MWAW_T_WRITENOW:
+                        rTypeName = "writer_WriteNow";
+                        break;
+                    default:
+                        rTypeName = "MWAW_Text_Document";
+                        break;
+                }
             }
         }
+    }
+    catch (...)
+    {
+        // Gracefully handle corrupted/invalid files (e.g., from failed network downloads)
+        return false;
     }
 
     return !rTypeName.isEmpty();

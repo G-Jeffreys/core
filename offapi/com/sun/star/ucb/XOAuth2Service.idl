@@ -1,0 +1,122 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+#ifndef __com_sun_star_ucb_XOAuth2Service_idl__
+#define __com_sun_star_ucb_XOAuth2Service_idl__
+
+#include <com/sun/star/uno/XInterface.idl>
+#include <com/sun/star/ucb/XCommandEnvironment.idl>
+#include <com/sun/star/ucb/InteractiveIOException.idl>
+#include <com/sun/star/lang/IllegalArgumentException.idl>
+#include <com/sun/star/beans/PropertyValue.idl>
+
+module com { module sun { module star { module ucb {
+
+/**
+ * Enhanced OAuth2 Service Interface
+ *
+ * This service provides centralized OAuth2 authentication and token management
+ * for cloud storage providers with automatic token refresh and graceful error handling.
+ *
+ * Key Features:
+ * - Automatic token refresh before expiry
+ * - Runtime OAuth configuration
+ * - Multi-account support
+ * - Enterprise-grade error handling
+ *
+ * @since LibreOffice 25.2
+ */
+interface XOAuth2Service : com::sun::star::uno::XInterface
+{
+    /**
+     * Authenticate with OAuth2 provider
+     *
+     * @param sProviderUrl Base URL of the cloud provider (e.g., "https://www.googleapis.com/drive/v3")
+     * @param sUsername User account identifier
+     * @param xEnvironment Command environment for UI interactions
+     * @return OAuth2 session token
+     * @throws InteractiveIOException when authentication fails
+     */
+    string authenticate([in] string sProviderUrl,
+                       [in] string sUsername,
+                       [in] com::sun::star::ucb::XCommandEnvironment xEnvironment)
+        raises(com::sun::star::ucb::InteractiveIOException);
+
+    /**
+     * Get valid access token with automatic refresh
+     *
+     * @param sProviderUrl Provider URL
+     * @param sUsername User account
+     * @param xEnvironment Command environment
+     * @return Valid access token (refreshed if necessary)
+     * @throws InteractiveIOException when token refresh fails
+     */
+    string getValidAccessToken([in] string sProviderUrl,
+                              [in] string sUsername,
+                              [in] com::sun::star::ucb::XCommandEnvironment xEnvironment)
+        raises(com::sun::star::ucb::InteractiveIOException);
+
+    /**
+     * Check if user has valid authentication for provider
+     *
+     * @param sProviderUrl Provider URL
+     * @param sUsername User account
+     * @return True if authenticated and tokens are valid
+     */
+    boolean isAuthenticated([in] string sProviderUrl,
+                           [in] string sUsername);
+
+    /**
+     * Force refresh of OAuth tokens
+     *
+     * @param sProviderUrl Provider URL
+     * @param sUsername User account
+     * @param xEnvironment Command environment
+     * @return New access token
+     * @throws InteractiveIOException when refresh fails
+     */
+    string refreshTokens([in] string sProviderUrl,
+                        [in] string sUsername,
+                        [in] com::sun::star::ucb::XCommandEnvironment xEnvironment)
+        raises(com::sun::star::ucb::InteractiveIOException);
+
+    /**
+     * Revoke authentication and clear stored tokens
+     *
+     * @param sProviderUrl Provider URL
+     * @param sUsername User account
+     */
+    void revokeAuthentication([in] string sProviderUrl,
+                             [in] string sUsername);
+
+    /**
+     * Get list of authenticated accounts for provider
+     *
+     * @param sProviderUrl Provider URL
+     * @return Sequence of usernames with valid authentication
+     */
+    sequence<string> getAuthenticatedAccounts([in] string sProviderUrl);
+
+    /**
+     * Configure OAuth2 settings for provider at runtime
+     *
+     * @param sProviderUrl Provider URL
+     * @param aConfiguration OAuth2 configuration parameters
+     * @throws IllegalArgumentException for invalid configuration
+     */
+    void configureProvider([in] string sProviderUrl,
+                          [in] sequence<com::sun::star::beans::PropertyValue> aConfiguration)
+        raises(com::sun::star::lang::IllegalArgumentException);
+};
+
+}; }; }; };
+
+#endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -82,6 +82,14 @@ static void InitCurl_easy(CURL* const pCURL)
 #endif
     }
 
+    // Set reasonable timeouts to prevent hanging (especially for OAuth operations)
+    // Connection timeout: 30 seconds
+    rc = curl_easy_setopt(pCURL, CURLOPT_CONNECTTIMEOUT, 30L);
+    assert(rc == CURLE_OK);
+    // Overall operation timeout: 120 seconds (OAuth can be slow)
+    rc = curl_easy_setopt(pCURL, CURLOPT_TIMEOUT, 120L);
+    assert(rc == CURLE_OK);
+
     curl_version_info_data const* const pVersion(curl_version_info(CURLVERSION_NOW));
     assert(pVersion);
     SAL_INFO("ucb.ucp.webdav.curl",

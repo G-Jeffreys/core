@@ -23,10 +23,18 @@ bool AbiWordImportFilter::doImportDocument(weld::Window*, librevenge::RVNGInputS
 
 bool AbiWordImportFilter::doDetectFormat(librevenge::RVNGInputStream& rInput, OUString& rTypeName)
 {
-    if (libabw::AbiDocument::isFileFormatSupported(&rInput))
+    try
     {
-        rTypeName = "writer_AbiWord_Document";
-        return true;
+        if (libabw::AbiDocument::isFileFormatSupported(&rInput))
+        {
+            rTypeName = "writer_AbiWord_Document";
+            return true;
+        }
+    }
+    catch (...)
+    {
+        // Gracefully handle corrupted/invalid files (e.g., from failed network downloads)
+        return false;
     }
 
     return false;

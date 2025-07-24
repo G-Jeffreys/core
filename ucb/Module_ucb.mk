@@ -20,6 +20,7 @@ $(eval $(call gb_Module_add_targets,ucb,\
 	Library_ucpfile1 \
 	Library_ucphier1 \
 	Library_ucpimage \
+	Library_ucpoauth2 \
 	Library_ucppkg1 \
 	Library_ucptdoc1 \
 ))
@@ -37,6 +38,10 @@ $(eval $(call gb_Module_add_check_targets,ucb,\
 ))
 
 endif
+
+$(eval $(call gb_Module_add_check_targets,ucb,\
+    CppunitTest_ucb_oauth2_integration \
+))
 
 $(eval $(call gb_Module_add_subsequentcheck_targets,ucb,\
 	JunitTest_ucb_unoapi \

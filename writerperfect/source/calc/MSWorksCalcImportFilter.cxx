@@ -191,8 +191,17 @@ bool MSWorksCalcImportFilter::doImportDocument(weld::Window* pParent,
     libwps::WPSKind kind = libwps::WPS_TEXT;
     libwps::WPSCreator creator;
     bool needEncoding;
-    const libwps::WPSConfidence confidence
-        = libwps::WPSDocument::isFileFormatSupported(&rInput, kind, creator, needEncoding);
+    libwps::WPSConfidence confidence = libwps::WPS_CONFIDENCE_NONE;
+
+    try
+    {
+        confidence = libwps::WPSDocument::isFileFormatSupported(&rInput, kind, creator, needEncoding);
+    }
+    catch (...)
+    {
+        // Gracefully handle corrupted/invalid files (e.g., from failed network downloads)
+        return false;
+    }
 
     if ((kind != libwps::WPS_SPREADSHEET && kind != libwps::WPS_DATABASE)
         || (confidence == libwps::WPS_CONFIDENCE_NONE))
@@ -399,9 +408,18 @@ MSWorksCalcImportFilter::filter(const css::uno::Sequence<css::beans::PropertyVal
                     libwps::WPSKind kind = libwps::WPS_TEXT;
                     libwps::WPSCreator creator;
                     bool needEncoding;
-                    const libwps::WPSConfidence confidence
-                        = libwps::WPSDocument::isFileFormatSupported(&structuredInput, kind,
-                                                                     creator, needEncoding);
+                    libwps::WPSConfidence confidence = libwps::WPS_CONFIDENCE_NONE;
+
+                    try
+                    {
+                        confidence = libwps::WPSDocument::isFileFormatSupported(&structuredInput, kind,
+                                                                               creator, needEncoding);
+                    }
+                    catch (...)
+                    {
+                        // Gracefully handle corrupted/invalid files (e.g., from failed network downloads)
+                        confidence = libwps::WPS_CONFIDENCE_NONE;
+                    }
                     if (confidence != libwps::WPS_CONFIDENCE_NONE)
                         return doImportDocument(Application::GetFrameWeld(xDialogParent),
                                                 structuredInput, exporter, aDescriptor);
@@ -422,8 +440,17 @@ bool MSWorksCalcImportFilter::doDetectFormat(librevenge::RVNGInputStream& rInput
     libwps::WPSKind kind = libwps::WPS_TEXT;
     libwps::WPSCreator creator;
     bool needEncoding;
-    const libwps::WPSConfidence confidence
-        = libwps::WPSDocument::isFileFormatSupported(&rInput, kind, creator, needEncoding);
+    libwps::WPSConfidence confidence = libwps::WPS_CONFIDENCE_NONE;
+
+    try
+    {
+        confidence = libwps::WPSDocument::isFileFormatSupported(&rInput, kind, creator, needEncoding);
+    }
+    catch (...)
+    {
+        // Gracefully handle corrupted/invalid files (e.g., from failed network downloads)
+        return false;
+    }
 
     if ((kind == libwps::WPS_SPREADSHEET || kind == libwps::WPS_DATABASE)
         && confidence != libwps::WPS_CONFIDENCE_NONE)

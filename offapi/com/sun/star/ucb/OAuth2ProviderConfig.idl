@@ -1,0 +1,64 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+#ifndef __com_sun_star_ucb_OAuth2ProviderConfig_idl__
+#define __com_sun_star_ucb_OAuth2ProviderConfig_idl__
+
+#include <com/sun/star/beans/PropertyValue.idl>
+
+module com { module sun { module star { module ucb {
+
+/**
+ * OAuth2 Configuration Structure
+ *
+ * Holds complete OAuth2 configuration for a cloud provider
+ *
+ * @since LibreOffice 25.2
+ */
+struct OAuth2ProviderConfig
+{
+    /** Display name for the provider (e.g., "Google Drive") */
+    string sDisplayName;
+
+    /** Base URL for the provider API */
+    string sBaseUrl;
+
+    /** OAuth2 authorization endpoint */
+    string sAuthUrl;
+
+    /** OAuth2 token endpoint */
+    string sTokenUrl;
+
+    /** OAuth2 scope (permissions requested) */
+    string sScope;
+
+    /** OAuth2 client ID */
+    string sClientId;
+
+    /** OAuth2 client secret */
+    string sClientSecret;
+
+    /** OAuth2 redirect URI */
+    string sRedirectUri;
+
+    /** Whether to use PKCE (Proof Key for Code Exchange) */
+    boolean bUsePKCE;
+
+    /** Whether to support device flow */
+    boolean bSupportDeviceFlow;
+
+    /** Custom OAuth parameters */
+    sequence<com::sun::star::beans::PropertyValue> aCustomParams;
+};
+
+}; }; }; };
+
+#endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

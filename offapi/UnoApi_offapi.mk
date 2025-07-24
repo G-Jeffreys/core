@@ -3893,6 +3893,7 @@ $(eval $(call gb_UnoApi_add_idlfiles,offapi,com/sun/star/ucb,\
 	NameClashException \
 	NameClashResolveRequest \
 	NumberedSortingInfo \
+	OAuth2ProviderConfig \
 	OpenCommandArgument \
 	OpenCommandArgument2 \
 	OpenCommandArgument3 \
@@ -3970,6 +3971,8 @@ $(eval $(call gb_UnoApi_add_idlfiles,offapi,com/sun/star/ucb,\
 	XInteractionSupplyAuthentication \
 	XInteractionSupplyAuthentication2 \
 	XInteractionSupplyName \
+	XOAuth2Configuration \
+	XOAuth2Service \
 	XParameterizedContentProvider \
 	XPersistentPropertySet \
 	XProgressHandler \
@@ -3991,6 +3994,7 @@ $(eval $(call gb_UnoApi_add_idlfiles,offapi,com/sun/star/ucb,\
 	XSimpleFileAccess3 \
 	XSortedDynamicResultSetFactory \
 	XSourceInitialization \
+	XTokenManager \
 	XUniversalContentBroker \
 	XWebDAVCommandEnvironment \
 ))

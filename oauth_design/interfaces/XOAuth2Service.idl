@@ -1,0 +1,110 @@
+/*
+ * Enhanced OAuth2 Service Interface for LibreOffice
+ * Provides centralized OAuth2 token management with automatic refresh
+ */
+
+#ifndef __com_sun_star_ucb_XOAuth2Service_idl__
+#define __com_sun_star_ucb_XOAuth2Service_idl__
+
+#include <com/sun/star/uno/XInterface.idl>
+#include <com/sun/star/ucb/XCommandEnvironment.idl>
+#include <com/sun/star/auth/XAuthenticationRequest.idl>
+#include <com/sun/star/beans/PropertyValue.idl>
+
+module com { module sun { module star { module ucb {
+
+/**
+ * Enhanced OAuth2 Service Interface
+ *
+ * This service provides centralized OAuth2 authentication and token management
+ * for cloud storage providers with automatic token refresh and graceful error handling.
+ *
+ * Key Features:
+ * - Automatic token refresh before expiry
+ * - Runtime OAuth configuration
+ * - Multi-account support
+ * - PKCE and device flow support
+ * - Enterprise-grade error handling
+ */
+interface XOAuth2Service : com::sun::star::uno::XInterface
+{
+    /**
+     * Authenticate with OAuth2 provider
+     *
+     * @param sProviderUrl Base URL of the cloud provider (e.g., "https://www.googleapis.com/drive/v3")
+     * @param sUsername User account identifier
+     * @param xEnvironment Command environment for UI interactions
+     * @return OAuth2 session token
+     */
+    string authenticate([in] string sProviderUrl,
+                       [in] string sUsername,
+                       [in] com::sun::star::ucb::XCommandEnvironment xEnvironment)
+        raises(com::sun::star::ucb::InteractiveIOException);
+
+    /**
+     * Get valid access token with automatic refresh
+     *
+     * @param sProviderUrl Provider URL
+     * @param sUsername User account
+     * @param xEnvironment Command environment
+     * @return Valid access token (refreshed if necessary)
+     */
+    string getValidAccessToken([in] string sProviderUrl,
+                              [in] string sUsername,
+                              [in] com::sun::star::ucb::XCommandEnvironment xEnvironment)
+        raises(com::sun::star::ucb::InteractiveIOException);
+
+    /**
+     * Check if user has valid authentication for provider
+     *
+     * @param sProviderUrl Provider URL
+     * @param sUsername User account
+     * @return True if authenticated and tokens are valid
+     */
+    boolean isAuthenticated([in] string sProviderUrl,
+                           [in] string sUsername);
+
+    /**
+     * Force refresh of OAuth tokens
+     *
+     * @param sProviderUrl Provider URL
+     * @param sUsername User account
+     * @param xEnvironment Command environment
+     * @return New access token
+     */
+    string refreshTokens([in] string sProviderUrl,
+                        [in] string sUsername,
+                        [in] com::sun::star::ucb::XCommandEnvironment xEnvironment)
+        raises(com::sun::star::ucb::InteractiveIOException);
+
+    /**
+     * Revoke authentication and clear stored tokens
+     *
+     * @param sProviderUrl Provider URL
+     * @param sUsername User account
+     */
+    void revokeAuthentication([in] string sProviderUrl,
+                             [in] string sUsername);
+
+    /**
+     * Get list of authenticated accounts for provider
+     *
+     * @param sProviderUrl Provider URL
+     * @return Sequence of usernames with valid authentication
+     */
+    sequence<string> getAuthenticatedAccounts([in] string sProviderUrl);
+
+    /**
+     * Configure OAuth2 settings for provider at runtime
+     *
+     * @param sProviderUrl Provider URL
+     * @param aConfiguration OAuth2 configuration parameters
+     */
+    void configureProvider([in] string sProviderUrl,
+                          [in] sequence<com::sun::star::beans::PropertyValue> aConfiguration)
+        raises(com::sun::star::lang::IllegalArgumentException);
+};
+
+}; }; }; };
+
+#endif

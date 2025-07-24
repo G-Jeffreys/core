@@ -1,0 +1,120 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+#ifndef __com_sun_star_ucb_XTokenManager_idl__
+#define __com_sun_star_ucb_XTokenManager_idl__
+
+#include <com/sun/star/uno/XInterface.idl>
+#include <com/sun/star/util/DateTime.idl>
+
+module com { module sun { module star { module ucb {
+
+/**
+ * OAuth2 Token Manager Interface
+ *
+ * Provides secure token storage and management with automatic expiry detection
+ * and refresh capabilities.
+ *
+ * @since LibreOffice 25.2
+ */
+interface XTokenManager : com::sun::star::uno::XInterface
+{
+    /**
+     * Store OAuth2 tokens securely
+     *
+     * @param sProviderUrl Provider URL
+     * @param sUsername User account
+     * @param sAccessToken Current access token
+     * @param sRefreshToken Refresh token for renewal
+     * @param aExpiryTime When the access token expires
+     */
+    void storeTokens([in] string sProviderUrl,
+                    [in] string sUsername,
+                    [in] string sAccessToken,
+                    [in] string sRefreshToken,
+                    [in] com::sun::star::util::DateTime aExpiryTime);
+
+    /**
+     * Retrieve stored access token
+     *
+     * @param sProviderUrl Provider URL
+     * @param sUsername User account
+     * @return Access token or empty string if not found
+     */
+    string getAccessToken([in] string sProviderUrl,
+                         [in] string sUsername);
+
+    /**
+     * Retrieve stored refresh token
+     *
+     * @param sProviderUrl Provider URL
+     * @param sUsername User account
+     * @return Refresh token or empty string if not found
+     */
+    string getRefreshToken([in] string sProviderUrl,
+                          [in] string sUsername);
+
+    /**
+     * Check if access token is expired or will expire soon
+     *
+     * @param sProviderUrl Provider URL
+     * @param sUsername User account
+     * @param nMarginMinutes Minutes before expiry to consider "expired" (default: 5)
+     * @return True if token needs refresh
+     */
+    boolean isTokenExpired([in] string sProviderUrl,
+                          [in] string sUsername,
+                          [in] long nMarginMinutes);
+
+    /**
+     * Get token expiry time
+     *
+     * @param sProviderUrl Provider URL
+     * @param sUsername User account
+     * @return Expiry timestamp
+     */
+    com::sun::star::util::DateTime getTokenExpiry([in] string sProviderUrl,
+                                                  [in] string sUsername);
+
+    /**
+     * Clear all tokens for an account
+     *
+     * @param sProviderUrl Provider URL
+     * @param sUsername User account
+     */
+    void clearTokens([in] string sProviderUrl,
+                    [in] string sUsername);
+
+    /**
+     * Get all accounts with stored tokens for provider
+     *
+     * @param sProviderUrl Provider URL
+     * @return List of usernames with tokens
+     */
+    sequence<string> getStoredAccounts([in] string sProviderUrl);
+
+    /**
+     * Update access token after refresh
+     *
+     * @param sProviderUrl Provider URL
+     * @param sUsername User account
+     * @param sNewAccessToken New access token
+     * @param aNewExpiryTime New expiry time
+     */
+    void updateAccessToken([in] string sProviderUrl,
+                          [in] string sUsername,
+                          [in] string sNewAccessToken,
+                          [in] com::sun::star::util::DateTime aNewExpiryTime);
+};
+
+}; }; }; };
+
+#endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

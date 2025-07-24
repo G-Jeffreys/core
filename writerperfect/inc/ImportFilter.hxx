@@ -120,12 +120,16 @@ public:
         sal_Int32 location = nLength;
         const css::beans::PropertyValue* pValue = Descriptor.getConstArray();
         css::uno::Reference<css::io::XInputStream> xInputStream;
+        bool bRepairMode = false;
+
         for (sal_Int32 i = 0; i < nLength; i++)
         {
             if (pValue[i].Name == "TypeName")
                 location = i;
             else if (pValue[i].Name == "InputStream")
                 pValue[i].Value >>= xInputStream;
+            else if (pValue[i].Name == "RepairPackage")
+                pValue[i].Value >>= bRepairMode;
         }
 
         if (!xInputStream.is())
@@ -133,17 +137,32 @@ public:
 
         WPXSvInputStream input(xInputStream);
 
-        if (doDetectFormat(input, sTypeName))
+        try
         {
-            assert(!sTypeName.isEmpty());
-
-            if (location == nLength)
+            if (doDetectFormat(input, sTypeName))
             {
-                Descriptor.realloc(nLength + 1);
-                Descriptor.getArray()[location].Name = "TypeName";
-            }
+                assert(!sTypeName.isEmpty());
 
-            Descriptor.getArray()[location].Value <<= sTypeName;
+                if (location == nLength)
+                {
+                    Descriptor.realloc(nLength + 1);
+                    Descriptor.getArray()[location].Name = "TypeName";
+                }
+
+                Descriptor.getArray()[location].Value <<= sTypeName;
+            }
+        }
+        catch (...)
+        {
+            // Enhanced protection for repair mode scenarios
+            // Gracefully handle corrupted/invalid files (e.g., from failed network downloads)
+            // Return empty string to indicate this filter doesn't support the file
+            if (bRepairMode)
+            {
+                // In repair mode, be extra conservative and don't claim support for problematic files
+                SAL_WARN("writerperfect", "Format detection failed in repair mode - rejecting file to prevent hangs");
+            }
+            return OUString();
         }
 
         return sTypeName;

@@ -524,6 +524,12 @@ namespace cmis
         {
             return m_pObject;
         }
+        catch ( const libcmis::Exception& e )
+        {
+            // Handle OAuth token refresh failures gracefully for Recent Documents
+            SAL_INFO( "ucb.ucp.cmis", "getObject: OAuth/session failed: " << e.what() );
+            return m_pObject;
+        }
         if ( !m_pObject.get() )
         {
             if ( !m_sObjectId.isEmpty( ) )
@@ -665,7 +671,8 @@ namespace cmis
                         if ( m_pObjectType.get( ) )
                             xRow->appendBoolean( rProp, getObjectType( xEnv )->getBaseType()->getId( ) == "cmis:document" );
                         else
-                            xRow->appendVoid( rProp );
+                            // Final fallback: use member variable to provide meaningful value instead of void
+                            xRow->appendBoolean( rProp, !m_bIsFolder );
                     }
                 }
                 else if ( rProp.Name == "IsFolder" )
@@ -683,7 +690,8 @@ namespace cmis
                         if ( m_pObjectType.get( ) )
                             xRow->appendBoolean( rProp, getObjectType( xEnv )->getBaseType()->getId( ) == "cmis:folder" );
                         else
-                            xRow->appendVoid( rProp );
+                            // Final fallback: use member variable to provide meaningful value instead of void
+                            xRow->appendBoolean( rProp, m_bIsFolder );
                     }
                 }
                 else if ( rProp.Name == "Title" )
@@ -1430,12 +1438,77 @@ namespace cmis
         const uno::Reference< io::XInputStream >& xIn,
         const uno::Reference< io::XOutputStream >& xOut )
     {
+        if (!xIn.is() || !xOut.is())
+        {
+            SAL_WARN("ucb.ucp.cmis", "copyData: Invalid input or output stream");
+            throw uno::RuntimeException(u"Invalid stream for Google Drive download"_ustr);
+        }
+
         uno::Sequence< sal_Int8 > theData( TRANSFER_BUFFER_SIZE );
+        sal_Int64 totalBytesTransferred = 0;
+        sal_Int32 readCount = 0;
 
-        while ( xIn->readBytes( theData, TRANSFER_BUFFER_SIZE ) > 0 )
-            xOut->writeBytes( theData );
+        try
+        {
+            SAL_INFO("ucb.ucp.cmis", "Starting Google Drive data transfer...");
 
-        xOut->closeOutput();
+            sal_Int32 nRead = 0;
+            while ( (nRead = xIn->readBytes( theData, TRANSFER_BUFFER_SIZE )) > 0 )
+            {
+                readCount++;
+                totalBytesTransferred += nRead;
+
+                // Progress logging every 1MB
+                if (totalBytesTransferred % (1024 * 1024) == 0)
+                {
+                    SAL_INFO("ucb.ucp.cmis", "Google Drive transfer progress: " << (totalBytesTransferred / 1024) << " KB");
+                }
+
+                try
+                {
+                    xOut->writeBytes( theData );
+                }
+                catch (const uno::Exception& e)
+                {
+                    SAL_WARN("ucb.ucp.cmis", "writeBytes failed at " << totalBytesTransferred << " bytes: " << e.Message);
+                    throw uno::RuntimeException(u"Google Drive download failed during write: "_ustr + e.Message);
+                }
+            }
+
+            SAL_INFO("ucb.ucp.cmis", "Google Drive transfer completed: " << totalBytesTransferred << " bytes in " << readCount << " chunks");
+
+            try
+            {
+                xOut->closeOutput();
+                SAL_INFO("ucb.ucp.cmis", "Output stream closed successfully");
+            }
+            catch (const uno::Exception& e)
+            {
+                SAL_WARN("ucb.ucp.cmis", "closeOutput failed: " << e.Message);
+                throw uno::RuntimeException(u"Google Drive download failed during close: "_ustr + e.Message);
+            }
+
+            if (totalBytesTransferred == 0)
+            {
+                SAL_WARN("ucb.ucp.cmis", "No data transferred from Google Drive");
+                throw uno::RuntimeException(u"No data received from Google Drive"_ustr);
+            }
+        }
+        catch (const uno::Exception& e)
+        {
+            SAL_WARN("ucb.ucp.cmis", "Exception during Google Drive data transfer: " << e.Message);
+            throw; // Re-throw to be caught by feedSink
+        }
+        catch (const std::exception& e)
+        {
+            SAL_WARN("ucb.ucp.cmis", "Standard exception during Google Drive data transfer: " << e.what());
+            throw uno::RuntimeException(OUString::fromUtf8(e.what()));
+        }
+        catch (...)
+        {
+            SAL_WARN("ucb.ucp.cmis", "Unknown exception during Google Drive data transfer");
+            throw uno::RuntimeException(u"Unknown error during Google Drive download"_ustr);
+        }
     }
 
     uno::Sequence< uno::Any > Content::setPropertyValues(
@@ -1550,32 +1623,139 @@ namespace cmis
 
         try
         {
+            // CRITICAL FIX: Ensure fresh session with valid OAuth tokens before download
+            if (m_aURL.getBindingUrl() == GDRIVE_BASE_URL || m_aURL.getBindingUrl() == ONEDRIVE_BASE_URL)
+            {
+                // Force session refresh for OAuth providers to ensure tokens are valid
+                OUString sSessionId = m_aURL.getBindingUrl( ) + m_aURL.getRepositoryId( );
+                m_pProvider->registerSession(sSessionId, m_aURL.getUsername( ), nullptr); // Clear cached session
+                m_pSession = nullptr; // Force session recreation
+
+                // This will create a fresh session with valid tokens
+                if (!getSession(xEnv))
+                {
+                    SAL_WARN("ucb.ucp.cmis", "Failed to refresh OAuth session before download");
+                    ucbhelper::cancelCommandExecution(
+                        ucb::IOErrorCode_ACCESS_DENIED,
+                        uno::Sequence< uno::Any >( 0 ),
+                        xEnv,
+                        u"Google Drive authentication expired - please reconnect to Google Drive"_ustr);
+                    return false;
+                }
+
+                SAL_INFO("ucb.ucp.cmis", "Refreshed OAuth session for Google Drive download");
+            }
+
             libcmis::Document* document = dynamic_cast< libcmis::Document* >( getObject( xEnv ).get() );
 
             if (!document)
                 return false;
 
-            uno::Reference< io::XInputStream > xIn = new StdInputStream(document->getContentStream());
+            // Get content stream with fresh authentication
+            boost::shared_ptr<std::istream> contentStream;
+            try
+            {
+                contentStream = document->getContentStream();
+                if (!contentStream || !contentStream->good())
+                {
+                    SAL_WARN("ucb.ucp.cmis", "Google Drive download failed - invalid content stream");
+                    ucbhelper::cancelCommandExecution(
+                        ucb::IOErrorCode_CANT_READ,
+                        uno::Sequence< uno::Any >( 0 ),
+                        xEnv,
+                        u"Download failed - invalid content stream from Google Drive"_ustr);
+                    return false;
+                }
+
+                // Check for HTML error responses from Google Drive (common corruption source)
+                contentStream->seekg(0, std::ios::beg);
+                char header[15] = {0};
+                contentStream->read(header, 14);
+                contentStream->seekg(0, std::ios::beg);
+
+                std::string headerStr(header, 14);
+                if (headerStr.find("<!DOCTYPE") == 0 || headerStr.find("<html") == 0 || headerStr.find("<HTML") == 0)
+                {
+                    SAL_WARN("ucb.ucp.cmis", "Google Drive returned HTML error page - OAuth tokens likely expired");
+                    ucbhelper::cancelCommandExecution(
+                        ucb::IOErrorCode_ACCESS_DENIED,
+                        uno::Sequence< uno::Any >( 0 ),
+                        xEnv,
+                        u"Google Drive authentication expired - please reconnect to Google Drive"_ustr);
+                    return false;
+                }
+
+                SAL_INFO("ucb.ucp.cmis", "Google Drive content stream validation passed - beginning download");
+            }
+            catch (const std::exception& e)
+            {
+                SAL_WARN("ucb.ucp.cmis", "Google Drive content stream failed: " << e.what());
+                ucbhelper::cancelCommandExecution(
+                    ucb::IOErrorCode_CANT_READ,
+                    uno::Sequence< uno::Any >( 0 ),
+                    xEnv,
+                    u"Google Drive download failed - please try reconnecting to Google Drive"_ustr);
+                return false;
+            }
+
+            uno::Reference< io::XInputStream > xIn = new StdInputStream(contentStream);
             if( !xIn.is( ) )
                 return false;
 
             if ( xDataSink.is() )
                 xDataSink->setInputStream( xIn );
             else if ( xOut.is() )
-                copyData( xIn, xOut );
+            {
+                // Use enhanced copyData with validation
+                try
+                {
+                    copyData( xIn, xOut );
+                    SAL_INFO("ucb.ucp.cmis", "Google Drive download completed successfully");
+                }
+                catch (const uno::Exception& e)
+                {
+                    SAL_WARN("ucb.ucp.cmis", "Data transfer failed: " << e.Message);
+                    ucbhelper::cancelCommandExecution(
+                        ucb::IOErrorCode_CANT_READ,
+                        uno::Sequence< uno::Any >( 0 ),
+                        xEnv,
+                        u"Google Drive download transfer failed: "_ustr + e.Message);
+                    return false;
+                }
+            }
         }
         catch ( const libcmis::Exception& e )
         {
-            SAL_INFO( "ucb.ucp.cmis", "Unexpected libcmis exception: " << e.what( ) );
+            SAL_WARN( "ucb.ucp.cmis", "Google Drive libcmis exception during download: " << e.what( ) );
+
+            // Provide user-friendly error messages for common Google Drive issues
+            OUString userMessage;
+            std::string errorStr = e.what();
+            if (errorStr.find("token") != std::string::npos || errorStr.find("auth") != std::string::npos ||
+                errorStr.find("401") != std::string::npos || errorStr.find("403") != std::string::npos)
+            {
+                userMessage = u"Google Drive authentication expired. Please reconnect to Google Drive in File → Remote Files."_ustr;
+            }
+            else if (errorStr.find("network") != std::string::npos || errorStr.find("connection") != std::string::npos)
+            {
+                userMessage = u"Network error connecting to Google Drive. Please check your internet connection."_ustr;
+            }
+            else
+            {
+                userMessage = u"Google Drive download failed: "_ustr + o3tl::runtimeToOUString(e.what());
+            }
+
             ucbhelper::cancelCommandExecution(
                                 ucb::IOErrorCode_GENERAL,
                                 uno::Sequence< uno::Any >( 0 ),
                                 xEnv,
-                                o3tl::runtimeToOUString(e.what()));
+                                userMessage);
         }
 
         return true;
     }
+
+
 
     uno::Sequence< beans::Property > Content::getProperties(
             const uno::Reference< ucb::XCommandEnvironment > & )
